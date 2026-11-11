@@ -1,0 +1,1596 @@
+{
+  "info": {
+    "_postman_id": "d7e016f2-bc43-4f24-b7d0-7c6be2d6977b",
+    "name": "GeoNames API (gazetteer for genealogy)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "GeoNames web services: more than 12M place names with alternate and historic spellings, administrative hierarchy, coordinates, reverse geocoding, postal codes and Wikipedia.\n\n**Setup:** create a free account at https://www.geonames.org/login, then on https://www.geonames.org/manageaccount click **\"Click here to enable\"** free web services. Put your username in the collection variable `geonames_username`. Free limits: 10,000 credits a day and 1,000 an hour.\n\nDocs: https://www.geonames.org/export/ws-overview.html"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "username",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{geonames_username}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "query",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if(!pm.collectionVariables.get('geonames_username')){console.warn('Set the collection variable geonames_username (free account at geonames.org with web services enabled).');}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "★ Search places",
+      "id": "7e683316-33a3-42d2-b4e9-b6e748bdaefc",
+      "item": [
+        {
+          "name": "Search (any attribute)",
+          "id": "9fc5a9c5-87fa-4afe-975c-de8c259bc9ea",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?q={{place}}&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": true,
+                  "description": "ISO-3166 code, repeatable"
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "startRow",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "disabled": true,
+                  "description": "or local"
+                },
+                {
+                  "key": "style",
+                  "value": "FULL",
+                  "disabled": true,
+                  "description": "SHORT|MEDIUM|LONG|FULL"
+                }
+              ]
+            },
+            "description": "Searches place names (including alternate and historic names), countries and admin codes. Sets {{geonameId}} from the first result."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Search: historic / alternate name",
+          "id": "c37e18b9-4869-42f0-b3d9-062160b5f9c9",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?q={{historic_name}}&isNameRequired=true&maxRows=50&style=FULL",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{historic_name}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "isNameRequired",
+                  "value": "true",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "style",
+                  "value": "FULL",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "GeoNames stores many German, Hungarian and other alternate names. Use it to turn names from old records (Nagybecskerek, Gross-Betschkerek) into today's place (Zrenjanin)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Search: exact name in a country",
+          "id": "07eb02b3-cbb0-4089-bf2e-2492d9e2b6ac",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?name_equals={{place}}&country={{country}}&maxRows=50&style=FULL",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "name_equals",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "style",
+                  "value": "FULL",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Search: fuzzy (misspelled names)",
+          "id": "75a915d4-d8c6-4e82-8b63-39c891f9112a",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?name={{place}}&fuzzy=0.7&country={{country}}&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "fuzzy",
+                  "value": "0.7",
+                  "disabled": false,
+                  "description": "0–1; lower = fuzzier"
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Useful for OCR or clerk spellings on immigration and naturalization papers."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: villages starting with…",
+          "id": "f59fd66e-a696-482a-9df7-98b59fc9b1a4",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?name_startsWith={{prefix}}&country={{country}}&featureClass=P&maxRows=50&orderby=relevance",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "name_startsWith",
+                  "value": "{{prefix}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "featureClass",
+                  "value": "P",
+                  "disabled": false,
+                  "description": "P = populated places"
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "orderby",
+                  "value": "relevance",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: names in local language",
+          "id": "29420e90-deb8-48d6-9603-2713abc6cf62",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?q={{place}}&country={{country}}&lang=local&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lang",
+                  "value": "local",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: churches in a bounding box",
+          "id": "a7ebdc06-aa6a-41d9-9a63-d2f19b2468a1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?q=church&featureCode=CH&north=45.8&south=45.3&east=20.6&west=20.2&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "church",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "featureCode",
+                  "value": "CH",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "north",
+                  "value": "45.8",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "south",
+                  "value": "45.3",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "east",
+                  "value": "20.6",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "west",
+                  "value": "20.2",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "featureCode CH = church; CMTY = cemetery; MSTY = monastery. The box shown is around Zrenjanin / Novo Miloševo."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search: cemeteries near a place",
+          "id": "fa0b1eab-f6b8-4c05-b74b-471b054601b1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/searchJSON?q={{place}}&featureCode=CMTY&country={{country}}&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "searchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "featureCode",
+                  "value": "CMTY",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Place details & hierarchy",
+      "id": "f5a1550b-2b96-4206-bd8c-9bda220f5294",
+      "item": [
+        {
+          "name": "Get place by geonameId",
+          "id": "e09f8c3f-54f4-4858-8f6c-ae4bc5f90ade",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/getJSON?geonameId={{geonameId}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "getJSON"
+              ],
+              "query": [
+                {
+                  "key": "geonameId",
+                  "value": "{{geonameId}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Full record including alternateNames (all spellings and languages)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "★ Hierarchy (country → county → municipality)",
+          "id": "a42d3a6c-5ad0-4c89-9095-aa2137343ce7",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/hierarchyJSON?geonameId={{geonameId}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "hierarchyJSON"
+              ],
+              "query": [
+                {
+                  "key": "geonameId",
+                  "value": "{{geonameId}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "The administrative chain. Helps work out which county or parish archive holds the records."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Children (subdivisions)",
+          "id": "058097fd-11e6-4220-a5ea-72b5264e320d",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/childrenJSON?geonameId={{geonameId}}&maxRows=200",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "childrenJSON"
+              ],
+              "query": [
+                {
+                  "key": "geonameId",
+                  "value": "{{geonameId}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "200",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Siblings",
+          "id": "cd899125-26e5-4844-9356-614edd37af42",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/siblingsJSON?geonameId={{geonameId}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "siblingsJSON"
+              ],
+              "query": [
+                {
+                  "key": "geonameId",
+                  "value": "{{geonameId}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Neighbouring countries",
+          "id": "7e1a3544-f31e-41ca-82fc-cafe9d401fad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/neighboursJSON?country={{country}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "neighboursJSON"
+              ],
+              "query": [
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Country info",
+          "id": "2d347197-2404-4152-a88d-aece64f7f04b",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/countryInfoJSON?country={{country}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "countryInfoJSON"
+              ],
+              "query": [
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Reverse geocoding (lat/lng → place)",
+      "id": "60b1cd55-f958-40f4-ad2d-f0402c8edb6e",
+      "item": [
+        {
+          "name": "★ Nearest populated place (lat/lng)",
+          "id": "81d79c35-9961-4672-827e-43c57039323c",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/findNearbyPlaceNameJSON?lat={{lat}}&lng={{lng}}&radius=10&maxRows=20",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "findNearbyPlaceNameJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "radius",
+                  "value": "10",
+                  "disabled": false,
+                  "description": "km"
+                },
+                {
+                  "key": "maxRows",
+                  "value": "20",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "style",
+                  "value": "FULL",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nearby features (any type)",
+          "id": "f050bf07-02f5-4492-bd54-c39dcb5a62ca",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/findNearbyJSON?lat={{lat}}&lng={{lng}}&radius=5&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "findNearbyJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "radius",
+                  "value": "5",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "featureCode",
+                  "value": "",
+                  "disabled": true,
+                  "description": "e.g. CH, CMTY"
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Country subdivision at a point",
+          "id": "f09f2c5f-a981-4ebd-a449-e2bfd71effd4",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/countrySubdivisionJSON?lat={{lat}}&lng={{lng}}&level=2",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "countrySubdivisionJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "level",
+                  "value": "2",
+                  "disabled": false,
+                  "description": "1 or 2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Timezone at a point",
+          "id": "e6e59de2-fa66-461a-8a11-c93d5af39e6c",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/timezoneJSON?lat={{lat}}&lng={{lng}}",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "timezoneJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Postal codes",
+      "id": "50ffe5a5-bfe6-4318-b75d-7a4da4ecae07",
+      "item": [
+        {
+          "name": "Postal code search (by place)",
+          "id": "e30f08e5-580e-4ad1-82b7-d9ec1ae6267d",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/postalCodeSearchJSON?placename={{place_us}}&country=US&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "postalCodeSearchJSON"
+              ],
+              "query": [
+                {
+                  "key": "placename",
+                  "value": "{{place_us}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "US",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Postal code lookup",
+          "id": "358508cd-30e6-490b-86f0-e4d7d749210a",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/postalCodeSearchJSON?postalcode={{postalcode}}&country=US&maxRows=50",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "postalCodeSearchJSON"
+              ],
+              "query": [
+                {
+                  "key": "postalcode",
+                  "value": "{{postalcode}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "country",
+                  "value": "US",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "50",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Postal codes near a point",
+          "id": "f9d8d53c-283f-46a0-b8ee-3e1ae117a2f5",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/findNearbyPostalCodesJSON?lat={{lat}}&lng={{lng}}&radius=10&maxRows=20",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "findNearbyPostalCodesJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "radius",
+                  "value": "10",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "20",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Wikipedia",
+      "id": "0fcfeddf-b5d6-4d2a-afb5-5b6446d4e5d6",
+      "item": [
+        {
+          "name": "Wikipedia search",
+          "id": "e8174d6e-0bf5-47ad-926e-c26ec472cd06",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/wikipediaSearchJSON?q={{place}}&maxRows=20&lang=en",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "wikipediaSearchJSON"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{place}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "20",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Geo-tagged Wikipedia articles."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wikipedia articles near a point",
+          "id": "c119659f-5aae-41e2-a61a-ef2fa5bd8a6c",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{geonames_api}}/findNearbyWikipediaJSON?lat={{lat}}&lng={{lng}}&radius=10&maxRows=20",
+              "host": [
+                "{{geonames_api}}"
+              ],
+              "path": [
+                "findNearbyWikipediaJSON"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "{{lat}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "lng",
+                  "value": "{{lng}}",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "radius",
+                  "value": "10",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "maxRows",
+                  "value": "20",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+                  "let j={};try{j=pm.response.json();}catch(e){}",
+                  "if(j.status){pm.test('GeoNames status: '+j.status.message,()=>{throw new Error(j.status.message)});}",
+                  "const list=j.geonames||j.postalCodes||(j.geonameId?[j]:[]);",
+                  "if(/^(★ )?Search/.test(pm.info.requestName)&&list[0]&&list[0].geonameId){pm.collectionVariables.set('geonameId',String(list[0].geonameId));}",
+                  "const rows=list.map(g=>[g.geonameId?`<a href=\"https://www.geonames.org/${g.geonameId}\">${g.name||g.placeName||g.title||''}</a>`:(g.placeName||g.title||g.name||''),g.toponymName||g.postalCode||'',g.fcodeName||g.feature||'',[g.adminName2,g.adminName1].filter(Boolean).join(', '),g.countryName||g.countryCode||'',(g.lat||'')+(g.lng?', '+g.lng:''),g.population||'',g.geonameId||g.wikipediaUrl||'']);",
+                  "pm.visualizer.set(`<style>table{border-collapse:collapse;font:13px sans-serif}td,th{border:1px solid #ccc;padding:4px 8px}th{background:#eee}</style><p>{{total}} total</p><table><tr><th>Name</th><th>Main name / postcode</th><th>Feature</th><th>Admin</th><th>Country</th><th>Lat, Lng</th><th>Pop.</th><th>id / link</th></tr>{{#each rows}}<tr>{{#each this}}<td>{{{this}}}</td>{{/each}}</tr>{{/each}}</table>`,{rows,total:j.totalResultsCount||list.length});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": ""
+    }
+  ],
+  "variable": [
+    {
+      "key": "geonames_api",
+      "value": "https://secure.geonames.org",
+      "type": "string"
+    },
+    {
+      "key": "geonames_username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "place",
+      "value": "Novo Miloševo",
+      "type": "string"
+    },
+    {
+      "key": "historic_name",
+      "value": "Nagybecskerek",
+      "type": "string"
+    },
+    {
+      "key": "prefix",
+      "value": "Novo",
+      "type": "string"
+    },
+    {
+      "key": "country",
+      "value": "RS",
+      "type": "string"
+    },
+    {
+      "key": "geonameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lat",
+      "value": "45.7186",
+      "type": "string"
+    },
+    {
+      "key": "lng",
+      "value": "20.3036",
+      "type": "string"
+    },
+    {
+      "key": "place_us",
+      "value": "Passaic",
+      "type": "string"
+    },
+    {
+      "key": "postalcode",
+      "value": "07055",
+      "type": "string"
+    }
+  ]
+}
