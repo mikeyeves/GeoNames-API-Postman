@@ -592,7 +592,7 @@
                 }
               ]
             },
-            "description": ""
+            "description": "Cemetery coverage in GeoNames varies by country. None are mapped around Novo Miloševo, so this returns 0 there."
           },
           "response": [],
           "event": [
@@ -807,7 +807,7 @@
                 }
               ]
             },
-            "description": ""
+            "description": "Only works for administrative areas (feature class A), such as a district or county geonameId from the Hierarchy result. A town id returns \"sibling service only supports feature class A\"."
           },
           "response": [],
           "event": [

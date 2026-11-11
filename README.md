@@ -25,8 +25,13 @@ Free limits are 10,000 credits per day and 1,000 per hour. The shared `demo` acc
 
 Each request includes a **Visualizer** results table. The *Search* requests also save the first result's `geonameId` to a variable, so you can run *Hierarchy* or *Get place* straight after.
 
-## Status
-Every call needs a personal username, so these requests have **not been run live**. They follow the [official documentation](https://www.geonames.org/export/ws-overview.html). The endpoint itself is online: a call with the shared `demo` user returned GeoNames' normal "daily limit exceeded" message.
+## Tested live (username enabled)
+Every request type was tested, and all returned results except *Siblings*, which only accepts administrative-area ids.
+- **Historic name:** `Nagybecskerek` and `Gross Betschkerek` both return **Zrenjanin** (geonameId 783814).
+- **Old village name:** `Beodra` returns **Novo Miloševo** (geonameId 787584). Its alternate names include *Beodra, Beodra-Dragutinovo, Dragutinovo, Karlova, Karlovo, Miloševo*.
+- **Hierarchy:** Earth › Europe › Serbia › Vojvodina › Central Banat › Opština Novi Bečej › Novo Miloševo.
+- **Churches in the box around Zrenjanin and Novo Miloševo:** Crkva sv. Arhangela Gavrila. Nearest places: Novo Miloševo, Novo Naselje, Bočar.
+- **Postal codes:** 23273 Novo Miloševo, and 07055 Passaic, NJ. Wikipedia nearby: Novo Miloševo, Bočar.
 
 ## Feature codes worth knowing
 | Code | Meaning |
